@@ -2,12 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { pengeluaranAPI, outletAPI } from '../services/api';
 
-const kategoriLabels = {
-  listrik: 'Listrik',
-  gaji: 'Gaji',
-  bahan_baku: 'Bahan Baku',
-  lainnya: 'Lainnya',
-};
+const cardStyle = { background: 'var(--color-card)', border: '1px solid var(--color-card-border)' };
+const inputStyle = { background: 'var(--color-sidebar)', color: 'var(--color-text-primary)', border: '1px solid var(--color-card-border)' };
+const selectStyle = { background: 'var(--color-sidebar)', color: 'var(--color-text-primary)', border: '1px solid var(--color-card-border)' };
 
 const Pengeluaran = () => {
   const { user } = useAuth();
@@ -15,304 +12,152 @@ const Pengeluaran = () => {
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [filters, setFilters] = useState({
-    outlet_id: '',
-    kategori: '',
-    tanggal_mulai: '',
-    tanggal_akhir: '',
-  });
-  const [form, setForm] = useState({
-    outlet_id: '',
-    kategori: '',
-    jumlah: '',
-    deskripsi: '',
-    tanggal: new Date().toISOString().split('T')[0],
-  });
+  const [filters, setFilters] = useState({ outlet_id: '', kategori: '', tanggal_mulai: '', tanggal_akhir: '' });
+  const [form, setForm] = useState({ outlet_id: '', kategori: '', jumlah: '', deskripsi: '', tanggal: new Date().toISOString().split('T')[0] });
 
-  useEffect(() => {
-    fetchData();
-  }, [filters]);
+  useEffect(() => { fetchData(); }, [filters]);
 
   const fetchData = async () => {
     try {
-      const [pengeluaranRes, outletRes] = await Promise.all([
-        pengeluaranAPI.getAll(filters),
-        outletAPI.getAll(),
-      ]);
-      setPengeluaran(pengeluaranRes.data);
-      setOutlets(outletRes.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
+      const [pRes, oRes] = await Promise.all([pengeluaranAPI.getAll(filters), outletAPI.getAll()]);
+      setPengeluaran(pRes.data); setOutlets(oRes.data);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
-  };
-
-  const handleFormChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleFilter = (e) => setFilters({ ...filters, [e.target.name]: e.target.value });
+  const handleForm = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      await pengeluaranAPI.create(form);
-      setShowForm(false);
-      setForm({
-        outlet_id: '',
-        kategori: '',
-        jumlah: '',
-        deskripsi: '',
-        tanggal: new Date().toISOString().split('T')[0],
-      });
-      fetchData();
-    } catch (error) {
-      console.error('Error creating pengeluaran:', error);
-    }
+    try { await pengeluaranAPI.create(form); setShowForm(false); setForm({ outlet_id: '', kategori: '', jumlah: '', deskripsi: '', tanggal: new Date().toISOString().split('T')[0] }); fetchData(); } catch (e) { console.error(e); }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Yakin ingin menghapus?')) {
-      try {
-        await pengeluaranAPI.delete(id);
-        fetchData();
-      } catch (error) {
-        console.error('Error deleting pengeluaran:', error);
-      }
-    }
+    if (window.confirm('Yakin ingin menghapus?')) { try { await pengeluaranAPI.delete(id); fetchData(); } catch (e) { console.error(e); } }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <span className="loading loading-spinner loading-lg text-primary"></span>
-      </div>
-    );
-  }
+  const Select = ({ name, value, onChange, children, required }) => (
+    <select name={name} value={value} onChange={onChange} required={required}
+      className="w-full px-3.5 py-2.5 rounded-lg text-sm outline-none" style={selectStyle}
+      onFocus={(e) => e.target.style.borderColor = 'var(--color-accent-blue)'}
+      onBlur={(e) => e.target.style.borderColor = 'var(--color-card-border)'}>{children}</select>
+  );
+
+  const Input = ({ type = 'text', name, value, onChange, placeholder, required, min, step }) => (
+    <input type={type} name={name} value={value} onChange={onChange} placeholder={placeholder} required={required} min={min} step={step}
+      className="w-full px-3.5 py-2.5 rounded-lg text-sm outline-none" style={inputStyle}
+      onFocus={(e) => e.target.style.borderColor = 'var(--color-accent-blue)'}
+      onBlur={(e) => e.target.style.borderColor = 'var(--color-card-border)'} />
+  );
+
+  const kategoriLabels = { listrik: 'Listrik', gaji: 'Gaji', bahan_baku: 'Bahan Baku', lainnya: 'Lainnya' };
+
+  if (loading) return <div className="flex items-center justify-center h-40"><div className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--color-accent-blue)', borderTopColor: 'transparent' }}></div></div>;
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="page-stack workspace-page">
+      <div className="workspace-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-base-content">Pengeluaran</h1>
-          <p className="text-base-content/60 mt-1">Catat pengeluaran outlet</p>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>Pengeluaran</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Catat pengeluaran outlet</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn btn-primary">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Pengeluaran Baru
-        </button>
+        <button onClick={() => setShowForm(true)} className="px-5 py-3.5 rounded-lg text-sm font-semibold text-white" style={{ background: 'var(--color-accent-blue)' }}>+ Pengeluaran Baru</button>
       </div>
 
-      {/* Filters */}
-      <div className="card bg-base-100 shadow-sm border border-base-200">
-        <div className="card-body p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="form-control">
-              <label className="label"><span className="label-text text-xs">Outlet</span></label>
-              <select
-                name="outlet_id"
-                value={filters.outlet_id}
-                onChange={handleFilterChange}
-                className="select select-bordered w-full"
-              >
-                <option value="">Semua Outlet</option>
-                {outlets.map((o) => (
-                  <option key={o.id} value={o.id}>{o.nama}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text text-xs">Kategori</span></label>
-              <select
-                name="kategori"
-                value={filters.kategori}
-                onChange={handleFilterChange}
-                className="select select-bordered w-full"
-              >
-                <option value="">Semua Kategori</option>
-                <option value="listrik">Listrik</option>
-                <option value="gaji">Gaji</option>
-                <option value="bahan_baku">Bahan Baku</option>
-                <option value="lainnya">Lainnya</option>
-              </select>
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text text-xs">Dari</span></label>
-              <input
-                type="date"
-                name="tanggal_mulai"
-                value={filters.tanggal_mulai}
-                onChange={handleFilterChange}
-                className="input input-bordered w-full"
-              />
-            </div>
-            <div className="form-control">
-              <label className="label"><span className="label-text text-xs">Sampai</span></label>
-              <input
-                type="date"
-                name="tanggal_akhir"
-                value={filters.tanggal_akhir}
-                onChange={handleFilterChange}
-                className="input input-bordered w-full"
-              />
-            </div>
+      <div className="workspace-filter rounded-2xl p-6" style={cardStyle}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Outlet</label>
+            <Select name="outlet_id" value={filters.outlet_id} onChange={handleFilter}><option value="">Semua Outlet</option>{outlets.map((o) => <option key={o.id} value={o.id}>{o.nama}</option>)}</Select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Kategori</label>
+            <Select name="kategori" value={filters.kategori} onChange={handleFilter}><option value="">Semua Kategori</option><option value="listrik">Listrik</option><option value="gaji">Gaji</option><option value="bahan_baku">Bahan Baku</option><option value="lainnya">Lainnya</option></Select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Dari</label>
+            <Input type="date" name="tanggal_mulai" value={filters.tanggal_mulai} onChange={handleFilter} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Sampai</label>
+            <Input type="date" name="tanggal_akhir" value={filters.tanggal_akhir} onChange={handleFilter} />
           </div>
         </div>
       </div>
 
-      {/* Form Pengeluaran Baru */}
       {showForm && (
-        <div className="card bg-base-100 shadow-sm border border-base-200">
-          <div className="card-body p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="card-title text-base-content">Pengeluaran Baru</h3>
-              <button
-                onClick={() => setShowForm(false)}
-                className="btn btn-ghost btn-sm btn-circle"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="form-control">
-                <label className="label"><span className="label-text">Outlet</span></label>
-                <select
-                  name="outlet_id"
-                  value={form.outlet_id}
-                  onChange={handleFormChange}
-                  className="select select-bordered w-full"
-                  required
-                >
-                  <option value="">Pilih Outlet</option>
-                  {outlets.map((o) => (
-                    <option key={o.id} value={o.id}>{o.nama}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-control">
-                <label className="label"><span className="label-text">Kategori</span></label>
-                <select
-                  name="kategori"
-                  value={form.kategori}
-                  onChange={handleFormChange}
-                  className="select select-bordered w-full"
-                  required
-                >
-                  <option value="">Pilih Kategori</option>
-                  <option value="listrik">Listrik</option>
-                  <option value="gaji">Gaji</option>
-                  <option value="bahan_baku">Bahan Baku</option>
-                  <option value="lainnya">Lainnya</option>
-                </select>
-              </div>
-              <div className="form-control">
-                <label className="label"><span className="label-text">Jumlah</span></label>
-                <input
-                  type="number"
-                  name="jumlah"
-                  value={form.jumlah}
-                  onChange={handleFormChange}
-                  className="input input-bordered w-full"
-                  placeholder="100000"
-                  min="0"
-                  step="1000"
-                  required
-                />
-              </div>
-              <div className="form-control">
-                <label className="label"><span className="label-text">Tanggal</span></label>
-                <input
-                  type="date"
-                  name="tanggal"
-                  value={form.tanggal}
-                  onChange={handleFormChange}
-                  className="input input-bordered w-full"
-                  required
-                />
-              </div>
-              <div className="form-control sm:col-span-2">
-                <label className="label"><span className="label-text">Deskripsi</span></label>
-                <input
-                  type="text"
-                  name="deskripsi"
-                  value={form.deskripsi}
-                  onChange={handleFormChange}
-                  className="input input-bordered w-full"
-                  placeholder="Catatan pengeluaran"
-                />
-              </div>
-              <div className="sm:col-span-2 flex gap-2 justify-end">
-                <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost">
-                  Batal
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  Simpan
-                </button>
-              </div>
-            </form>
+        <div className="workspace-filter rounded-2xl p-6" style={cardStyle}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>Pengeluaran Baru</h3>
+            <button onClick={() => setShowForm(false)} className="p-1 rounded-md" style={{ color: 'var(--color-text-muted)' }}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           </div>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Outlet</label>
+              <Select name="outlet_id" value={form.outlet_id} onChange={handleForm} required><option value="">Pilih Outlet</option>{outlets.map((o) => <option key={o.id} value={o.id}>{o.nama}</option>)}</Select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Kategori</label>
+              <Select name="kategori" value={form.kategori} onChange={handleForm} required><option value="">Pilih Kategori</option><option value="listrik">Listrik</option><option value="gaji">Gaji</option><option value="bahan_baku">Bahan Baku</option><option value="lainnya">Lainnya</option></Select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Jumlah</label>
+              <Input type="number" name="jumlah" value={form.jumlah} onChange={handleForm} placeholder="100000" min="0" step="1000" required />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Tanggal</label>
+              <Input type="date" name="tanggal" value={form.tanggal} onChange={handleForm} required />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>Deskripsi</label>
+              <Input name="deskripsi" value={form.deskripsi} onChange={handleForm} placeholder="Catatan pengeluaran" />
+            </div>
+            <div className="sm:col-span-2 flex justify-end gap-2 mt-1">
+              <button type="button" onClick={() => setShowForm(false)} className="px-3 py-1.5 rounded-lg text-xs" style={{ color: 'var(--color-text-secondary)' }}>Batal</button>
+              <button type="submit" className="px-4 py-1.5 rounded-lg text-xs font-medium text-white" style={{ background: 'var(--color-accent-blue)' }}>Simpan</button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* Table */}
-      <div className="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
+      <div className="workspace-table rounded-2xl overflow-hidden" style={cardStyle}>
         <div className="overflow-x-auto">
-          <table className="table table-zebra w-full">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="bg-base-200">
-                <th className="px-4 py-3">ID</th>
-                <th className="px-4 py-3">Outlet</th>
-                <th className="px-4 py-3">Kategori</th>
-                <th className="px-4 py-3">Jumlah</th>
-                <th className="px-4 py-3">Deskripsi</th>
-                <th className="px-4 py-3">Tanggal</th>
-                <th className="px-4 py-3">Aksi</th>
+              <tr style={{ background: 'var(--color-sidebar)' }}>
+                {['ID', 'Outlet', 'Kategori', 'Jumlah', 'Deskripsi', 'Tanggal', 'Aksi'].map((h) => (
+                  <th key={h} className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-text-muted)' }}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {pengeluaran.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-12 text-base-content/50">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-base-content/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0l1-1m-1 1l-1-1" />
-                    </svg>
-                    <p>Belum ada pengeluaran</p>
+                <tr><td colSpan={7} className="text-center py-16" style={{ color: 'var(--color-text-muted)' }}>Belum ada pengeluaran</td></tr>
+              ) : pengeluaran.map((p) => (
+                <tr key={p.id} style={{ borderTop: '1px solid var(--color-divider)' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--color-nav-hover)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                  <td className="px-5 py-3.5 font-mono text-xs" style={{ color: 'var(--color-text-muted)' }}>{p.id}</td>
+                  <td className="px-5 py-3.5" style={{ color: 'var(--color-text-secondary)' }}>{p.Outlet?.nama}</td>
+                  <td className="px-5 py-3.5">
+                    <span style={{ background: 'rgba(79,140,255,0.12)', color: 'var(--color-accent-blue)', borderRadius: 9999, padding: '1.5px 8px', fontSize: '10px', fontWeight: 500 }}>
+                      {kategoriLabels[p.kategori] || p.kategori}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 font-medium" style={{ color: 'var(--color-text-primary)' }}>Rp {p.jumlah?.toLocaleString()}</td>
+                  <td className="px-5 py-3.5" style={{ color: 'var(--color-text-secondary)' }}>{p.deskripsi || '-'}</td>
+                  <td className="px-5 py-3.5" style={{ color: 'var(--color-text-muted)' }}>{p.tanggal}</td>
+                  <td className="px-5 py-3.5">
+                    <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--color-text-muted)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent-red)'; e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
                   </td>
                 </tr>
-              ) : (
-                pengeluaran.map((p) => (
-                  <tr key={p.id} className="hover:bg-base-50/50">
-                    <td className="px-4 py-3 text-sm font-mono text-base-content/60">{p.id}</td>
-                    <td className="px-4 py-3 text-sm text-base-content">{p.Outlet?.nama}</td>
-                    <td className="px-4 py-3">
-                      <span className="badge badge-outline">{kategoriLabels[p.kategori] || p.kategori}</span>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-base-content">
-                      Rp {p.jumlah?.toLocaleString()}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-base-content/80">{p.deskripsi || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-base-content/60">{p.tanggal}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="btn btn-xs btn-error btn-circle"
-                        title="Hapus"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
