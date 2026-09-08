@@ -49,10 +49,10 @@ const Layout = () => {
             <NavLink
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 ${
+              className={`sidebar-nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 ${
                 isActive
-                  ? 'bg-[rgba(79,140,255,0.12)] text-[var(--color-accent-blue)] font-medium'
-                  : 'text-[var(--color-text-secondary)] hover:bg-[rgba(255,255,255,0.04)] hover:text-[var(--color-text-primary)]'
+                  ? 'sidebar-nav-link--active text-white font-semibold'
+                  : 'text-[var(--color-text-secondary)]'
               }`}
             >
               {item.icon}
@@ -62,41 +62,31 @@ const Layout = () => {
         })}
       </nav>
 
-      {/* User info - dipisah dari nav dengan jarak */}
-      <div className="mt-5 border-t border-[var(--color-sidebar-border)] pt-4">
-        <div className="flex items-center gap-3 px-3 py-2 text-sm">
-          <div className="w-8 h-8 rounded-full bg-[var(--color-accent-blue)] flex items-center justify-center flex-shrink-0">
-            <span className="font-semibold text-[var(--color-accent-blue)] opacity-80">
-              {user?.nama?.charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <span>
-            <span className="font-medium text-[var(--color-text-primary)]">{user?.nama}</span>
-            <span className="ml-1 text-[var(--color-text-muted)] capitalize">{user?.role}</span>
-          </span>
-        </div>
-        <button
-          onClick={logout}
-          className="mt-2 w-full py-2 rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-accent-red)] hover:bg-[rgba(255,255,255,0.04)] transition-colors text-sm"
-          title="Keluar"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-          Keluar
+      <div className="sidebar-profile">
+        <div className="profile-avatar">{user?.nama?.charAt(0).toUpperCase()}</div>
+        <div className="profile-copy"><strong>{user?.nama}</strong><span>{user?.role === 'admin' ? 'Administrator' : user?.role}</span></div>
+        <button onClick={logout} className="profile-logout" type="button" title="Keluar" aria-label="Keluar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="m16 17 5-5-5-5M21 12H9m4 7v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1" /></svg>
         </button>
-      </div>
-    </div>
+      </div>    </div>
   );
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="app-shell flex h-screen overflow-hidden">
       {/* Desktop sidebar - lebar lebih optimal */}
-      <aside className="hidden lg:flex flex-col w-64 shrink-0 bg-[var(--color-sidebar)] app-sidebar border-r border-[var(--color-sidebar-border)]">
+      <aside className="app-sidebar hidden lg:flex flex-col w-64 shrink-0 bg-[var(--color-sidebar)] border border-[var(--color-sidebar-border)]">
         {sidebarContent}
       </aside>
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile topbar */}
+        <header className="app-topbar hidden lg:flex">
+          <button className="topbar-menu" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg></button>
+          <label className="topbar-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="6" /><path strokeLinecap="round" d="m16 16 4 4" /></svg><input aria-label="Cari" placeholder="Cari transaksi, pelanggan, atau stok" /></label>
+          <div className="topbar-spacer" />
+          <button className="topbar-icon" type="button" aria-label="Notifikasi">&#128276;</button>
+          <div className="topbar-user"><span>{user?.nama?.charAt(0).toUpperCase()}</span><div><b>{user?.nama}</b><small>{user?.role}</small></div></div>
+        </header>        {/* Mobile topbar */}
         <header className="lg:hidden flex items-center h-12 px-3 bg-[var(--color-sidebar)] border-b border-[var(--color-sidebar-border)] shrink-0">
           <label htmlFor="mobile-drawer" className="p-1 rounded-md text-[var(--color-text-secondary)] hover:bg-[var(--color-nav-hover)] cursor-pointer">
             <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
