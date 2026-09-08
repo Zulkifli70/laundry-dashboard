@@ -2,6 +2,13 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { pengeluaranAPI, outletAPI } from '../services/api';
 
+const kategoriLabels = {
+  listrik: 'Listrik',
+  gaji: 'Gaji',
+  bahan_baku: 'Bahan Baku',
+  lainnya: 'Lainnya',
+};
+
 const Pengeluaran = () => {
   const { user } = useAuth();
   const [pengeluaran, setPengeluaran] = useState([]);
@@ -78,103 +85,238 @@ const Pengeluaran = () => {
     }
   };
 
-  if (loading) return <div className="p-4">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-xl font-bold">Pengeluaran</h1>
-          <a href="/dashboard" className="text-blue-500">Kembali</a>
+    <div className="p-4 lg:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-base-content">Pengeluaran</h1>
+          <p className="text-base-content/60 mt-1">Catat pengeluaran outlet</p>
         </div>
-      </nav>
-      <main className="max-w-7xl mx-auto p-4">
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
-          <div className="flex gap-4 flex-wrap">
-            <select name="outlet_id" value={filters.outlet_id} onChange={handleFilterChange} className="p-2 border rounded">
-              <option value="">Semua Outlet</option>
-              {outlets.map((o) => (
-                <option key={o.id} value={o.id}>{o.nama}</option>
-              ))}
-            </select>
-            <select name="kategori" value={filters.kategori} onChange={handleFilterChange} className="p-2 border rounded">
-              <option value="">Semua Kategori</option>
-              <option value="listrik">Listrik</option>
-              <option value="gaji">Gaji</option>
-              <option value="bahan_baku">Bahan Baku</option>
-              <option value="lainnya">Lainnya</option>
-            </select>
-            <input type="date" name="tanggal_mulai" value={filters.tanggal_mulai} onChange={handleFilterChange} className="p-2 border rounded" />
-            <input type="date" name="tanggal_akhir" value={filters.tanggal_akhir} onChange={handleFilterChange} className="p-2 border rounded" />
-          </div>
-          <div className="mt-4">
-            <button onClick={() => setShowForm(true)} className="bg-blue-500 text-white px-4 py-2 rounded">
-              + Pengeluaran Baru
-            </button>
-          </div>
-        </div>
+        <button onClick={() => setShowForm(true)} className="btn btn-primary">
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Pengeluaran Baru
+        </button>
+      </div>
 
-        {showForm && (
-          <div className="bg-white rounded-lg shadow p-4 mb-4">
-            <h3 className="text-lg font-semibold mb-4">Pengeluaran Baru</h3>
-            <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
-              <select name="outlet_id" value={form.outlet_id} onChange={handleFormChange} className="p-2 border rounded" required>
-                <option value="">Pilih Outlet</option>
+      {/* Filters */}
+      <div className="card bg-base-100 shadow-sm border border-base-200">
+        <div className="card-body p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="form-control">
+              <label className="label"><span className="label-text text-xs">Outlet</span></label>
+              <select
+                name="outlet_id"
+                value={filters.outlet_id}
+                onChange={handleFilterChange}
+                className="select select-bordered w-full"
+              >
+                <option value="">Semua Outlet</option>
                 {outlets.map((o) => (
                   <option key={o.id} value={o.id}>{o.nama}</option>
                 ))}
               </select>
-              <select name="kategori" value={form.kategori} onChange={handleFormChange} className="p-2 border rounded" required>
-                <option value="">Pilih Kategori</option>
+            </div>
+            <div className="form-control">
+              <label className="label"><span className="label-text text-xs">Kategori</span></label>
+              <select
+                name="kategori"
+                value={filters.kategori}
+                onChange={handleFilterChange}
+                className="select select-bordered w-full"
+              >
+                <option value="">Semua Kategori</option>
                 <option value="listrik">Listrik</option>
                 <option value="gaji">Gaji</option>
                 <option value="bahan_baku">Bahan Baku</option>
                 <option value="lainnya">Lainnya</option>
               </select>
-              <input type="number" name="jumlah" placeholder="Jumlah" value={form.jumlah} onChange={handleFormChange} className="p-2 border rounded" required />
-              <input type="date" name="tanggal" value={form.tanggal} onChange={handleFormChange} className="p-2 border rounded" required />
-              <input type="text" name="deskripsi" placeholder="Deskripsi" value={form.deskripsi} onChange={handleFormChange} className="p-2 border rounded" />
-              <div className="flex gap-2">
-                <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Simpan</button>
-                <button type="button" onClick={() => setShowForm(false)} className="bg-gray-500 text-white px-4 py-2 rounded">Batal</button>
+            </div>
+            <div className="form-control">
+              <label className="label"><span className="label-text text-xs">Dari</span></label>
+              <input
+                type="date"
+                name="tanggal_mulai"
+                value={filters.tanggal_mulai}
+                onChange={handleFilterChange}
+                className="input input-bordered w-full"
+              />
+            </div>
+            <div className="form-control">
+              <label className="label"><span className="label-text text-xs">Sampai</span></label>
+              <input
+                type="date"
+                name="tanggal_akhir"
+                value={filters.tanggal_akhir}
+                onChange={handleFilterChange}
+                className="input input-bordered w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Form Pengeluaran Baru */}
+      {showForm && (
+        <div className="card bg-base-100 shadow-sm border border-base-200">
+          <div className="card-body p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="card-title text-base-content">Pengeluaran Baru</h3>
+              <button
+                onClick={() => setShowForm(false)}
+                className="btn btn-ghost btn-sm btn-circle"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="form-control">
+                <label className="label"><span className="label-text">Outlet</span></label>
+                <select
+                  name="outlet_id"
+                  value={form.outlet_id}
+                  onChange={handleFormChange}
+                  className="select select-bordered w-full"
+                  required
+                >
+                  <option value="">Pilih Outlet</option>
+                  {outlets.map((o) => (
+                    <option key={o.id} value={o.id}>{o.nama}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-control">
+                <label className="label"><span className="label-text">Kategori</span></label>
+                <select
+                  name="kategori"
+                  value={form.kategori}
+                  onChange={handleFormChange}
+                  className="select select-bordered w-full"
+                  required
+                >
+                  <option value="">Pilih Kategori</option>
+                  <option value="listrik">Listrik</option>
+                  <option value="gaji">Gaji</option>
+                  <option value="bahan_baku">Bahan Baku</option>
+                  <option value="lainnya">Lainnya</option>
+                </select>
+              </div>
+              <div className="form-control">
+                <label className="label"><span className="label-text">Jumlah</span></label>
+                <input
+                  type="number"
+                  name="jumlah"
+                  value={form.jumlah}
+                  onChange={handleFormChange}
+                  className="input input-bordered w-full"
+                  placeholder="100000"
+                  min="0"
+                  step="1000"
+                  required
+                />
+              </div>
+              <div className="form-control">
+                <label className="label"><span className="label-text">Tanggal</span></label>
+                <input
+                  type="date"
+                  name="tanggal"
+                  value={form.tanggal}
+                  onChange={handleFormChange}
+                  className="input input-bordered w-full"
+                  required
+                />
+              </div>
+              <div className="form-control sm:col-span-2">
+                <label className="label"><span className="label-text">Deskripsi</span></label>
+                <input
+                  type="text"
+                  name="deskripsi"
+                  value={form.deskripsi}
+                  onChange={handleFormChange}
+                  className="input input-bordered w-full"
+                  placeholder="Catatan pengeluaran"
+                />
+              </div>
+              <div className="sm:col-span-2 flex gap-2 justify-end">
+                <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost">
+                  Batal
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Simpan
+                </button>
               </div>
             </form>
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left">ID</th>
-                <th className="px-4 py-3 text-left">Outlet</th>
-                <th className="px-4 py-3 text-left">Kategori</th>
-                <th className="px-4 py-3 text-left">Jumlah</th>
-                <th className="px-4 py-3 text-left">Deskripsi</th>
-                <th className="px-4 py-3 text-left">Tanggal</th>
-                <th className="px-4 py-3 text-left">Aksi</th>
+      {/* Table */}
+      <div className="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="table table-zebra w-full">
+            <thead>
+              <tr className="bg-base-200">
+                <th className="px-4 py-3">ID</th>
+                <th className="px-4 py-3">Outlet</th>
+                <th className="px-4 py-3">Kategori</th>
+                <th className="px-4 py-3">Jumlah</th>
+                <th className="px-4 py-3">Deskripsi</th>
+                <th className="px-4 py-3">Tanggal</th>
+                <th className="px-4 py-3">Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {pengeluaran.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="px-4 py-3">{p.id}</td>
-                  <td className="px-4 py-3">{p.Outlet?.nama}</td>
-                  <td className="px-4 py-3">{p.kategori}</td>
-                  <td className="px-4 py-3">Rp {p.jumlah?.toLocaleString()}</td>
-                  <td className="px-4 py-3">{p.deskripsi}</td>
-                  <td className="px-4 py-3">{p.tanggal}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => handleDelete(p.id)} className="bg-red-500 text-white px-2 py-1 rounded text-xs">
-                      Hapus
-                    </button>
+              {pengeluaran.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="text-center py-12 text-base-content/50">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-base-content/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0l1-1m-1 1l-1-1" />
+                    </svg>
+                    <p>Belum ada pengeluaran</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                pengeluaran.map((p) => (
+                  <tr key={p.id} className="hover:bg-base-50/50">
+                    <td className="px-4 py-3 text-sm font-mono text-base-content/60">{p.id}</td>
+                    <td className="px-4 py-3 text-sm text-base-content">{p.Outlet?.nama}</td>
+                    <td className="px-4 py-3">
+                      <span className="badge badge-outline">{kategoriLabels[p.kategori] || p.kategori}</span>
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-base-content">
+                      Rp {p.jumlah?.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-base-content/80">{p.deskripsi || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-base-content/60">{p.tanggal}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        className="btn btn-xs btn-error btn-circle"
+                        title="Hapus"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
