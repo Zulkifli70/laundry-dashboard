@@ -10,6 +10,7 @@ const layananRoutes = require('./routes/layanan');
 const transaksiRoutes = require('./routes/transaksi');
 const pengeluaranRoutes = require('./routes/pengeluaran');
 const stokRoutes = require('./routes/stok');
+const pelangganRoutes = require('./routes/pelanggan');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/layanan', layananRoutes);
 app.use('/api/transaksi', transaksiRoutes);
 app.use('/api/pengeluaran', pengeluaranRoutes);
 app.use('/api/stok', stokRoutes);
+app.use('/api/pelanggan', pelangganRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'API Laundry Dashboard' });

@@ -5,6 +5,7 @@ const Transaksi = require('./Transaksi');
 const Pengeluaran = require('./Pengeluaran');
 const StokItem = require('./StokItem');
 const StokLog = require('./StokLog');
+const Pelanggan = require('./Pelanggan');
 
 module.exports = {
   Outlet,
@@ -14,4 +15,5 @@ module.exports = {
   Pengeluaran,
   StokItem,
   StokLog,
+  Pelanggan,
 };

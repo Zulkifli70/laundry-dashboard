@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../context/AuthContext";
-import { transaksiAPI, layananAPI, outletAPI } from "../services/api";
+import { transaksiAPI, layananAPI, outletAPI, pelangganAPI } from "../services/api";
 import Modal from "../components/Modal";
 
 const cardStyle = {
@@ -34,6 +34,7 @@ const toWaNumber = (hp = "") => {
 const emptyForm = {
   outlet_id: "",
   layanan_id: "",
+  pelanggan_id: "",
   nama_pelanggan: "",
   no_hp_pelanggan: "",
   jumlah_qty: "",
@@ -45,6 +46,7 @@ const Transaksi = () => {
   const [transaksi, setTransaksi] = useState([]);
   const [layanan, setLayanan] = useState([]);
   const [outlets, setOutlets] = useState([]);
+  const [pelanggan, setPelanggan] = useState([]);
   const [loading, setLoading] = useState(true);
   const [masterLoading, setMasterLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -88,6 +90,13 @@ const Transaksi = () => {
       } catch (e) {
         console.error("Gagal load outlet:", e);
         if (alive) setOutlets([]);
+      }
+      try {
+        const pRes = await pelangganAPI.getAll({ outlet_id: isAdmin ? "" : user?.outlet_id });
+        if (alive) setPelanggan(toArray(pRes));
+      } catch (e) {
+        console.error("Gagal load pelanggan:", e);
+        if (alive) setPelanggan([]);
       } finally {
         if (alive) setMasterLoading(false);
       }
@@ -152,6 +161,20 @@ const Transaksi = () => {
     return Number(selectedLayanan.harga) * qty;
   }, [selectedLayanan, form.jumlah_qty]);
 
+  // Auto-fill nama & no_hp when pelanggan is selected
+  useEffect(() => {
+    if (form.pelanggan_id) {
+      const selected = pelanggan.find((p) => String(p.id) === String(form.pelanggan_id));
+      if (selected) {
+        setForm((f) => ({
+          ...f,
+          nama_pelanggan: selected.nama,
+          no_hp_pelanggan: selected.no_hp,
+        }));
+      }
+    }
+  }, [form.pelanggan_id, pelanggan]);
+
   const openCreate = () => {
     setEditing(null);
     setFormError("");
@@ -168,6 +191,7 @@ const Transaksi = () => {
     setForm({
       outlet_id: String(item.outlet_id || ""),
       layanan_id: String(item.layanan_id || ""),
+      pelanggan_id: item.pelanggan_id ? String(item.pelanggan_id) : "",
       nama_pelanggan: item.nama_pelanggan || "",
       no_hp_pelanggan: item.no_hp_pelanggan || "",
       jumlah_qty: String(item.jumlah_qty || ""),
@@ -191,6 +215,7 @@ const Transaksi = () => {
       const payload = {
         outlet_id: isAdmin ? parseInt(form.outlet_id) : user.outlet_id,
         layanan_id: parseInt(form.layanan_id),
+        pelanggan_id: form.pelanggan_id ? parseInt(form.pelanggan_id) : null,
         nama_pelanggan: form.nama_pelanggan.trim(),
         no_hp_pelanggan: form.no_hp_pelanggan.trim(),
         jumlah_qty: parseFloat(form.jumlah_qty),
@@ -572,7 +597,7 @@ const Transaksi = () => {
                 <option value="lunas">Lunas</option>
               </select>
             </div>
-            <div className="modal-field" style={{ gridColumn: "1 / -1" }}>
+<div className="modal-field" style={{ gridColumn: "1 / -1" }}>
               <label>Jenis Layanan *</label>
               <select
                 name="layanan_id"
@@ -584,8 +609,8 @@ const Transaksi = () => {
                   {masterLoading
                     ? "Memuat layanan..."
                     : layanan.length
-                      ? "Pilih Layanan"
-                      : "Belum ada layanan"}
+                    ? "Pilih Layanan"
+                    : "Belum ada layanan"}
                 </option>
                 {layanan.map((l) => (
                   <option key={l.id} value={l.id}>
@@ -596,6 +621,26 @@ const Transaksi = () => {
               {!masterLoading && layanan.length === 0 && (
                 <small style={{ color: "var(--color-text-muted)" }}>
                   Data layanan kosong. Minta admin menambahkannya dulu.
+                </small>
+              )}
+            </div>
+            <div className="modal-field" style={{ gridColumn: "1 / -1" }}>
+              <label>Pelanggan (Pilih dari daftar)</label>
+              <select
+                name="pelanggan_id"
+                value={form.pelanggan_id}
+                onChange={handleForm}
+              >
+                <option value="">-- Pilih pelanggan (atau isi manual di bawah) --</option>
+                {pelanggan.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nama} — {p.no_hp}
+                  </option>
+                ))}
+              </select>
+              {!masterLoading && pelanggan.length === 0 && (
+                <small style={{ color: "var(--color-text-muted)" }}>
+                  Belum ada pelanggan. Tambahkan di menu Pelanggan atau isi manual.
                 </small>
               )}
             </div>

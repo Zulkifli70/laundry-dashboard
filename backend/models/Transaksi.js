@@ -3,6 +3,7 @@ const sequelize = require('../config/database');
 const Outlet = require('./Outlet');
 const User = require('./User');
 const Layanan = require('./Layanan');
+const Pelanggan = require('./Pelanggan');
 
 const Transaksi = sequelize.define('Transaksi', {
   id: {
@@ -31,6 +32,14 @@ const Transaksi = sequelize.define('Transaksi', {
     allowNull: false,
     references: {
       model: Layanan,
+      key: 'id',
+    },
+  },
+  pelanggan_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: {
+      model: Pelanggan,
       key: 'id',
     },
   },
@@ -66,9 +75,11 @@ const Transaksi = sequelize.define('Transaksi', {
 Transaksi.belongsTo(Outlet, { foreignKey: 'outlet_id' });
 Transaksi.belongsTo(User, { foreignKey: 'user_id' });
 Transaksi.belongsTo(Layanan, { foreignKey: 'layanan_id' });
+Transaksi.belongsTo(Pelanggan, { foreignKey: 'pelanggan_id', as: 'Pelanggan' });
 
 Outlet.hasMany(Transaksi, { foreignKey: 'outlet_id' });
 User.hasMany(Transaksi, { foreignKey: 'user_id' });
 Layanan.hasMany(Transaksi, { foreignKey: 'layanan_id' });
+Pelanggan.hasMany(Transaksi, { foreignKey: 'pelanggan_id' });
 
 module.exports = Transaksi;

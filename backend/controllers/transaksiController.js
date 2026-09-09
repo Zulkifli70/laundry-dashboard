@@ -3,6 +3,7 @@ const Transaksi = require('../models/Transaksi');
 const Outlet = require('../models/Outlet');
 const User = require('../models/User');
 const Layanan = require('../models/Layanan');
+const Pelanggan = require('../models/Pelanggan');
 
 exports.getTransaksi = async (req, res) => {
   try {
@@ -30,7 +31,8 @@ exports.getTransaksi = async (req, res) => {
       include: [
         { model: Outlet, attributes: ['id', 'nama'] },
         { model: User, attributes: ['id', 'nama'] },
-        { model: Layanan, attributes: ['id', 'nama'] },
+        { model: Layanan, attributes: ['id', 'nama', 'tipe_satuan'] },
+        { model: Pelanggan, as: 'Pelanggan', attributes: ['id', 'nama', 'no_hp'] },
       ],
       order: [['created_at', 'DESC']],
     });
@@ -48,6 +50,7 @@ exports.getTransaksiById = async (req, res) => {
         { model: Outlet, attributes: ['id', 'nama'] },
         { model: User, attributes: ['id', 'nama'] },
         { model: Layanan, attributes: ['id', 'nama', 'tipe_satuan'] },
+        { model: Pelanggan, as: 'Pelanggan', attributes: ['id', 'nama', 'no_hp'] },
       ],
     });
     if (!transaksi) {
@@ -64,6 +67,7 @@ exports.createTransaksi = async (req, res) => {
     let {
       outlet_id,
       layanan_id,
+      pelanggan_id,
       nama_pelanggan,
       no_hp_pelanggan,
       jumlah_qty,
@@ -82,6 +86,21 @@ exports.createTransaksi = async (req, res) => {
     if (!layanan_id) {
       return res.status(400).json({ message: 'Layanan wajib dipilih' });
     }
+
+    // If pelanggan_id provided, fetch pelanggan data
+    if (pelanggan_id) {
+      const pelanggan = await Pelanggan.findByPk(pelanggan_id);
+      if (!pelanggan) {
+        return res.status(404).json({ message: 'Pelanggan tidak ditemukan' });
+      }
+      // Check outlet access for karyawan
+      if (req.user.role === 'karyawan' && pelanggan.outlet_id !== req.user.outlet_id) {
+        return res.status(403).json({ message: 'Pelanggan bukan dari outlet Anda' });
+      }
+      nama_pelanggan = pelanggan.nama;
+      no_hp_pelanggan = pelanggan.no_hp;
+    }
+
     if (!nama_pelanggan || !no_hp_pelanggan) {
       return res.status(400).json({ message: 'Nama dan No HP pelanggan wajib diisi' });
     }
@@ -108,6 +127,7 @@ exports.createTransaksi = async (req, res) => {
       outlet_id,
       user_id: req.user.id,
       layanan_id,
+      pelanggan_id: pelanggan_id || null,
       nama_pelanggan,
       no_hp_pelanggan,
       jumlah_qty: qty,
@@ -126,7 +146,7 @@ exports.createTransaksi = async (req, res) => {
 exports.updateTransaksi = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, status_bayar } = req.body;
+    const { status, status_bayar, pelanggan_id, nama_pelanggan, no_hp_pelanggan, layanan_id, jumlah_qty, total_harga } = req.body;
     const transaksi = await Transaksi.findByPk(id);
     if (!transaksi) {
       return res.status(404).json({ message: 'Transaksi tidak ditemukan' });
@@ -135,9 +155,36 @@ exports.updateTransaksi = async (req, res) => {
     if (req.user.role === 'karyawan' && transaksi.outlet_id !== req.user.outlet_id) {
       return res.status(403).json({ message: 'Akses ditolak untuk outlet ini' });
     }
+    
     const patch = {};
     if (status) patch.status = status;
     if (status_bayar) patch.status_bayar = status_bayar;
+    
+    // Admin can update more fields
+    if (req.user.role === 'admin') {
+      if (pelanggan_id !== undefined) {
+        if (pelanggan_id) {
+          const pelanggan = await Pelanggan.findByPk(pelanggan_id);
+          if (!pelanggan) {
+            return res.status(404).json({ message: 'Pelanggan tidak ditemukan' });
+          }
+          if (pelanggan.outlet_id !== transaksi.outlet_id) {
+            return res.status(400).json({ message: 'Pelanggan harus dari outlet yang sama' });
+          }
+          patch.pelanggan_id = pelanggan_id;
+          patch.nama_pelanggan = pelanggan.nama;
+          patch.no_hp_pelanggan = pelanggan.no_hp;
+        } else {
+          patch.pelanggan_id = null;
+        }
+      }
+      if (nama_pelanggan) patch.nama_pelanggan = nama_pelanggan;
+      if (no_hp_pelanggan) patch.no_hp_pelanggan = no_hp_pelanggan;
+      if (layanan_id) patch.layanan_id = layanan_id;
+      if (jumlah_qty) patch.jumlah_qty = parseFloat(jumlah_qty);
+      if (total_harga) patch.total_harga = parseFloat(total_harga);
+    }
+    
     if (Object.keys(patch).length === 0) {
       return res.status(400).json({ message: 'Tidak ada perubahan dikirim' });
     }
@@ -173,7 +220,8 @@ exports.exportTransaksi = async (req, res) => {
       include: [
         { model: Outlet, attributes: ['id', 'nama'] },
         { model: User, attributes: ['id', 'nama'] },
-        { model: Layanan, attributes: ['id', 'nama'] },
+        { model: Layanan, attributes: ['id', 'nama', 'tipe_satuan'] },
+        { model: Pelanggan, as: 'Pelanggan', attributes: ['id', 'nama', 'no_hp'] },
       ],
       order: [['created_at', 'DESC']],
     });

@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Transaksi from './pages/Transaksi';
 import Pengeluaran from './pages/Pengeluaran';
 import Stok from './pages/Stok';
+import Pelanggan from './pages/Pelanggan';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children }) => {
@@ -30,6 +31,7 @@ function App() {
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/transaksi" element={<Transaksi />} />
+            <Route path="/pelanggan" element={<Pelanggan />} />
             <Route path="/pengeluaran" element={<AdminRoute><Pengeluaran /></AdminRoute>} />
             <Route path="/stok" element={<Stok />} />
           </Route>

@@ -1,7 +1,7 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const sequelize = require('./config/database');
-const { Outlet, User, Layanan } = require('./models');
+const { Outlet, User, Layanan, Pelanggan } = require('./models');
 
 const seed = async () => {
   try {
@@ -37,6 +37,16 @@ const seed = async () => {
       { nama: 'Cuci Gorden', tipe_satuan: 'item', harga: 20000 },
     ]);
     console.log(`Created ${layanan.length} layanan`);
+
+    // Seed Pelanggan
+    const pelanggan = await Pelanggan.bulkCreate([
+      { outlet_id: outlets[0].id, nama: 'Budi Santoso', no_hp: '081234567890', alamat: 'Jl. Mawar No. 10', catatan: 'Pelanggan langganan' },
+      { outlet_id: outlets[0].id, nama: 'Siti Rahayu', no_hp: '081234567891', alamat: 'Jl. Melati No. 5', catatan: '' },
+      { outlet_id: outlets[0].id, nama: 'Ahmad Wijaya', no_hp: '081234567892', alamat: 'Jl. Kenanga No. 20', catatan: 'Pilih setrika halus' },
+      { outlet_id: outlets[1].id, nama: 'Dewi Lestari', no_hp: '081234567893', alamat: 'Jl. Anggrek No. 3', catatan: '' },
+      { outlet_id: outlets[1].id, nama: 'Roni Pratama', no_hp: '081234567894', alamat: 'Jl. Dahlia No. 15', catatan: 'Express 1 hari' },
+    ]);
+    console.log(`Created ${pelanggan.length} pelanggan`);
 
     console.log('\n--- SEED DONE ---');
     console.log('Login credentials:');

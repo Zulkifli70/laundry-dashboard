@@ -60,6 +60,14 @@ export const transaksiAPI = {
   export: (params) => api.get('/transaksi/export', { params, responseType: 'blob' }),
 };
 
+export const pelangganAPI = {
+  getAll: (params) => api.get('/pelanggan', { params }),
+  getById: (id) => api.get(`/pelanggan/${id}`),
+  create: (data) => api.post('/pelanggan', data),
+  update: (id, data) => api.put(`/pelanggan/${id}`, data),
+  delete: (id) => api.delete(`/pelanggan/${id}`),
+};
+
 export const pengeluaranAPI = {
   getAll: (params) => api.get('/pengeluaran', { params }),
   create: (data) => api.post('/pengeluaran', data),
