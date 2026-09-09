@@ -48,6 +48,7 @@ const Transaksi = () => {
   const [loading, setLoading] = useState(true);
   const [masterLoading, setMasterLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [filters, setFilters] = useState({
@@ -152,10 +153,25 @@ const Transaksi = () => {
   }, [selectedLayanan, form.jumlah_qty]);
 
   const openCreate = () => {
+    setEditing(null);
     setFormError("");
     setForm({
       ...emptyForm,
       outlet_id: isAdmin ? "" : String(user?.outlet_id || ""),
+    });
+    setShowForm(true);
+  };
+
+  const openEdit = (item) => {
+    setEditing(item);
+    setFormError("");
+    setForm({
+      outlet_id: String(item.outlet_id || ""),
+      layanan_id: String(item.layanan_id || ""),
+      nama_pelanggan: item.nama_pelanggan || "",
+      no_hp_pelanggan: item.no_hp_pelanggan || "",
+      jumlah_qty: String(item.jumlah_qty || ""),
+      status_bayar: item.status_bayar || "belum_bayar",
     });
     setShowForm(true);
   };
@@ -181,8 +197,13 @@ const Transaksi = () => {
         total_harga: previewTotal,
         status_bayar: form.status_bayar,
       };
-      await transaksiAPI.create(payload);
+      if (editing) {
+        await transaksiAPI.update(editing.id, payload);
+      } else {
+        await transaksiAPI.create(payload);
+      }
       setShowForm(false);
+      setEditing(null);
       setForm({
         ...emptyForm,
         outlet_id: isAdmin ? "" : String(user?.outlet_id || ""),
@@ -209,6 +230,17 @@ const Transaksi = () => {
     } catch (e) {
       console.error(e);
       alert(e.response?.data?.message || "Gagal export");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Yakin ingin menghapus transaksi ini?")) return;
+    try {
+      await transaksiAPI.delete(id);
+      fetchTransaksi();
+    } catch (e) {
+      console.error(e);
+      alert(e.response?.data?.message || "Gagal menghapus transaksi");
     }
   };
 
@@ -274,6 +306,69 @@ const Transaksi = () => {
     return map[s] || "#8492a6";
   };
   const bayarColor = (s) => (s === "lunas" ? "#34d399" : "#f87171");
+
+  // Status flow configuration
+  const STATUS_FLOW = [
+    { key: "diterima", label: "Diterima", icon: "📥" },
+    { key: "diproses", label: "Diproses", icon: "⚙️" },
+    { key: "selesai", label: "Selesai", icon: "✅" },
+    { key: "diambil", label: "Diambil", icon: "📤" },
+  ];
+
+  const getNextAction = (currentStatus, statusBayar) => {
+    const currentIndex = STATUS_FLOW.findIndex((s) => s.key === currentStatus);
+    if (currentIndex === -1 || currentIndex === STATUS_FLOW.length - 1) return null;
+    const next = STATUS_FLOW[currentIndex + 1];
+    return { ...next, currentIndex };
+  };
+
+  const renderStatusStepper = (currentStatus) => {
+    const currentIndex = STATUS_FLOW.findIndex((s) => s.key === currentStatus);
+    return (
+      <div className="status-stepper" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        {STATUS_FLOW.map((step, idx) => {
+          const isCompleted = idx < currentIndex;
+          const isCurrent = idx === currentIndex;
+          const isFuture = idx > currentIndex;
+          const color = isCompleted || isCurrent ? statusColor(step.key) : "var(--color-divider)";
+          const textColor = isCompleted || isCurrent ? statusColor(step.key) : "var(--color-text-muted)";
+          
+          return (
+            <div key={step.key} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <div
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: isCompleted ? 12 : 10,
+                  background: isCompleted ? color : (isCurrent ? `${color}20` : "transparent"),
+                  color: isCompleted ? "white" : textColor,
+                  border: isCurrent && !isCompleted ? `2px solid ${color}` : "none",
+                  fontWeight: isCurrent ? 700 : 500,
+                  transition: "all 0.2s",
+                }}
+              >
+                {isCompleted ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M20 6L9 17l-5-5"/></svg>
+                ) : (
+                  step.icon
+                )}
+              </div>
+              <span style={{ fontSize: 10, fontWeight: isCurrent ? 600 : 400, color: textColor, whiteSpace: "nowrap" }}>
+                {step.label}
+              </span>
+              {idx < STATUS_FLOW.length - 1 && (
+                <div style={{ flex: 1, height: 2, maxWidth: 40, background: idx < currentIndex ? color : "var(--color-divider)", borderRadius: 1 }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   if (loading)
     return (
@@ -422,11 +517,15 @@ const Transaksi = () => {
       <Modal
         open={showForm}
         onClose={() => !submitting && setShowForm(false)}
-        title="Transaksi Baru"
+        title={editing ? `Edit Transaksi #${editing.id}` : "Transaksi Baru"}
         subtitle={
           isAdmin
-            ? "Pilih outlet, layanan, dan data pelanggan."
-            : "Transaksi otomatis tercatat di outlet Anda."
+            ? editing
+              ? "Perbarui data transaksi."
+              : "Pilih outlet, layanan, dan data pelanggan."
+            : editing
+              ? "Perbarui data transaksi outlet Anda."
+              : "Transaksi otomatis tercatat di outlet Anda."
         }
         maxWidth="620px"
       >
@@ -570,7 +669,10 @@ const Transaksi = () => {
             <button
               type="button"
               className="modal-btn modal-btn--ghost"
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setShowForm(false);
+                setEditing(null);
+              }}
               disabled={submitting}
             >
               Batal
@@ -580,7 +682,7 @@ const Transaksi = () => {
               className="modal-btn modal-btn--primary"
               disabled={submitting || masterLoading}
             >
-              {submitting ? "Menyimpan..." : "Simpan Transaksi"}
+              {submitting ? "Menyimpan..." : editing ? "Simpan Perubahan" : "Simpan Transaksi"}
             </button>
           </div>
         </form>
@@ -679,19 +781,8 @@ const Transaksi = () => {
                     >
                       {rupiah(t.total_harga)}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        style={{
-                          background: `${statusColor(t.status)}20`,
-                          color: statusColor(t.status),
-                          borderRadius: 9999,
-                          padding: "1.5px 8px",
-                          fontSize: "10px",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
-                      </span>
+                    <td className="px-5 py-3.5" style={{ minWidth: 280 }}>
+                      {renderStatusStepper(t.status)}
                     </td>
                     <td className="px-5 py-3.5">
                       <span
@@ -708,64 +799,89 @@ const Transaksi = () => {
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {t.status === "diterima" && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Primary Next Action Button */}
+                        {getNextAction(t.status, t.status_bayar) && (
                           <button
                             onClick={() =>
-                              handleStatus(t.id, { status: "diproses" })
+                              handleStatus(t.id, { status: getNextAction(t.status, t.status_bayar).key })
                             }
-                            className="px-2 py-1 rounded-md text-xs font-medium text-white"
-                            style={{ background: "var(--color-accent-orange)" }}
+                            className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
+                            style={{
+                              background: `linear-gradient(135deg, ${statusColor(getNextAction(t.status, t.status_bayar).key)}, ${statusColor(getNextAction(t.status, t.status_bayar).key)}dd)`,
+                              boxShadow: `0 2px 8px ${statusColor(getNextAction(t.status, t.status_bayar).key)}40`,
+                            }}
+                            title={`Klik untuk memindahkan ke ${getNextAction(t.status, t.status_bayar).label}`}
                           >
-                            Proses
+                            {getNextAction(t.status, t.status_bayar).icon} {getNextAction(t.status, t.status_bayar).label}
                           </button>
                         )}
-                        {t.status === "diproses" && (
-                          <button
-                            onClick={() =>
-                              handleStatus(t.id, { status: "selesai" })
-                            }
-                            className="px-2 py-1 rounded-md text-xs font-medium text-white"
-                            style={{ background: "var(--color-accent-green)" }}
-                          >
-                            Selesai
-                          </button>
-                        )}
-                        {t.status === "selesai" && (
-                          <button
-                            onClick={() =>
-                              handleStatus(t.id, { status: "diambil" })
-                            }
-                            className="px-2 py-1 rounded-md text-xs font-medium text-white"
-                            style={{ background: "var(--color-accent-blue)" }}
-                          >
-                            Diambil
-                          </button>
-                        )}
+                        {/* Lunas button - always available if not paid */}
                         {t.status_bayar !== "lunas" && (
                           <button
                             onClick={() =>
                               handleStatus(t.id, { status_bayar: "lunas" })
                             }
-                            className="px-2 py-1 rounded-md text-xs font-medium"
+                            className="px-3 py-2 rounded-lg text-sm font-medium transition-all"
                             style={{
-                              background: "rgba(52,211,153,.15)",
+                              background: "rgba(52,211,153,.12)",
                               color: "#34d399",
+                              border: "1px solid rgba(52,211,153,.3)",
                             }}
+                            title="Tandai sebagai Lunas"
                           >
-                            Lunas
+                            💰 Lunas
                           </button>
                         )}
+                        {/* WhatsApp button */}
                         {t.no_hp_pelanggan && (
                           <a
                             href={`https://wa.me/${toWaNumber(t.no_hp_pelanggan)}?text=${encodeURIComponent(`Halo ${t.nama_pelanggan}, laundry Anda (${t.Layanan?.nama || "pesanan"}) sudah ${t.status}. Total ${rupiah(t.total_harga)}. Terima kasih!`)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="px-2 py-1 rounded-md text-xs font-medium text-white"
+                            className="px-3 py-2 rounded-lg text-sm font-medium text-white transition-all"
                             style={{ background: "#25d366" }}
+                            title="Kirim notifikasi WhatsApp"
                           >
-                            WA
+                            💬 WA
                           </a>
+                        )}
+                        {/* Admin actions: Edit & Delete */}
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => openEdit(t)}
+                              title="Edit transaksi"
+                              className="p-2 rounded-lg transition-colors"
+                              style={{ color: "var(--color-text-muted)" }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = "var(--color-accent-blue)";
+                                e.currentTarget.style.background = "rgba(79,140,255,0.1)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = "var(--color-text-muted)";
+                                e.currentTarget.style.background = "transparent";
+                              }}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(t.id)}
+                              title="Hapus transaksi"
+                              className="p-2 rounded-lg transition-colors"
+                              style={{ color: "var(--color-text-muted)" }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.color = "var(--color-accent-red)";
+                                e.currentTarget.style.background = "rgba(248,113,113,0.1)";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.color = "var(--color-text-muted)";
+                                e.currentTarget.style.background = "transparent";
+                              }}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>

@@ -94,3 +94,32 @@ exports.getStokLog = async (req, res) => {
     res.status(500).json({ message: 'Terjadi kesalahan server' });
   }
 };
+
+exports.updateStok = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nama_barang, satuan, jumlah_stok, batas_minimum } = req.body;
+    const stokItem = await StokItem.findByPk(id);
+    if (!stokItem) {
+      return res.status(404).json({ message: 'Stok item tidak ditemukan' });
+    }
+    await stokItem.update({ nama_barang, satuan, jumlah_stok, batas_minimum });
+    res.json(stokItem);
+  } catch (error) {
+    res.status(500).json({ message: 'Terjadi kesalahan server' });
+  }
+};
+
+exports.deleteStok = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const stokItem = await StokItem.findByPk(id);
+    if (!stokItem) {
+      return res.status(404).json({ message: 'Stok item tidak ditemukan' });
+    }
+    await stokItem.destroy();
+    res.json({ message: 'Stok item berhasil dihapus' });
+  } catch (error) {
+    res.status(500).json({ message: 'Terjadi kesalahan server' });
+  }
+};

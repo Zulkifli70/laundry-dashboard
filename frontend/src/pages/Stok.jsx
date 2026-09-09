@@ -23,6 +23,7 @@ const Stok = () => {
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [showAdjust, setShowAdjust] = useState(null);
   const [showLog, setShowLog] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -64,8 +65,23 @@ const Stok = () => {
   const handleAdjust = (e) => setAdjustForm({ ...adjustForm, [e.target.name]: e.target.value });
 
   const openCreate = () => {
+    setEditing(null);
     setFormError('');
     setForm(emptyForm);
+    setShowForm(true);
+  };
+
+  const openEdit = (item) => {
+    setEditing(item);
+    setFormError('');
+    setForm({
+      outlet_id: String(item.outlet_id || ''),
+      nama_barang: item.nama_barang || '',
+      satuan: item.satuan || 'pcs',
+      satuan_custom: '',
+      jumlah_stok: String(item.jumlah_stok || ''),
+      batas_minimum: String(item.batas_minimum || ''),
+    });
     setShowForm(true);
   };
 
@@ -79,14 +95,20 @@ const Stok = () => {
     if (isNaN(parseFloat(form.jumlah_stok)) || parseFloat(form.jumlah_stok) < 0) return setFormError('Jumlah stok awal tidak valid.');
     setSubmitting(true);
     try {
-      await stokAPI.create({
+      const payload = {
         outlet_id: parseInt(form.outlet_id),
         nama_barang: form.nama_barang.trim(),
         satuan: satuanFinal,
         jumlah_stok: parseFloat(form.jumlah_stok),
         batas_minimum: form.batas_minimum === '' ? 0 : parseFloat(form.batas_minimum),
-      });
+      };
+      if (editing) {
+        await stokAPI.update(editing.id, payload);
+      } else {
+        await stokAPI.create(payload);
+      }
       setShowForm(false);
+      setEditing(null);
       setForm(emptyForm);
       fetchStok();
     } catch (e) {
@@ -128,6 +150,17 @@ const Stok = () => {
       const res = await stokAPI.getLog(item.id);
       setLogs(toArray(res));
     } catch (e) { console.error('Gagal load log:', e); } finally { setLogLoading(false); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Yakin ingin menghapus stok ini?')) return;
+    try {
+      await stokAPI.delete(id);
+      fetchStok();
+    } catch (e) {
+      console.error(e);
+      alert(e.response?.data?.message || 'Gagal menghapus stok');
+    }
   };
 
   const Select = ({ name, value, onChange, children, required }) => (
@@ -172,7 +205,9 @@ const Stok = () => {
 
       {/* Modal tambah stok */}
       <Modal open={showForm && isAdmin} onClose={() => (!submitting && setShowForm(false))}
-        title="Tambah Stok Baru" subtitle="Daarkan barang baru ke outlet tertentu." maxWidth="600px">
+        title={editing ? `Edit Stok #${editing.id}` : 'Tambah Stok Baru'}
+        subtitle={editing ? 'Perbarui data stok barang.' : 'Daarkan barang baru ke outlet tertentu.'}
+        maxWidth="600px">
         <form onSubmit={handleSubmit}>
           <div className="modal-grid modal-grid--2">
             <div className="modal-field">
@@ -210,8 +245,8 @@ const Stok = () => {
           </div>
           {formError && <div className="modal-error" style={{ marginTop: 14 }}>{formError}</div>}
           <div className="modal-actions">
-            <button type="button" className="modal-btn modal-btn--ghost" onClick={() => setShowForm(false)} disabled={submitting}>Batal</button>
-            <button type="submit" className="modal-btn modal-btn--primary" disabled={submitting}>{submitting ? 'Menyimpan...' : 'Simpan'}</button>
+            <button type="button" className="modal-btn modal-btn--ghost" onClick={() => { setShowForm(false); setEditing(null); }} disabled={submitting}>Batal</button>
+            <button type="submit" className="modal-btn modal-btn--primary" disabled={submitting}>{submitting ? 'Menyimpan...' : editing ? 'Simpan Perubahan' : 'Simpan'}</button>
           </div>
         </form>
       </Modal>
@@ -333,11 +368,25 @@ const Stok = () => {
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
                         </button>
                       )}
+                      {isAdmin && (
+                        <button onClick={() => openEdit(s)} title="Edit" className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--color-text-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent-blue)'; e.currentTarget.style.background = 'rgba(79,140,255,0.1)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                        </button>
+                      )}
                       {(isAdmin) && (
                         <button onClick={() => openLog(s)} title="Lihat riwayat" className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--color-text-muted)' }}
                           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent-blue)'; e.currentTarget.style.background = 'rgba(79,140,255,0.1)'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button onClick={() => handleDelete(s.id)} title="Hapus" className="p-1.5 rounded-md transition-colors" style={{ color: 'var(--color-text-muted)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-accent-red)'; e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--color-text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
                       )}
                       {!isAdmin && <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>Read-only</span>}

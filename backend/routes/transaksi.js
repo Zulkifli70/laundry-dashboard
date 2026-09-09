@@ -9,5 +9,6 @@ router.get('/', transaksiController.getTransaksi);
 router.get('/:id', transaksiController.getTransaksiById);
 router.post('/', transaksiController.createTransaksi);
 router.put('/:id', transaksiController.updateTransaksi);
+router.delete('/:id', authorize('admin'), transaksiController.deleteTransaksi);
 
 module.exports = router;

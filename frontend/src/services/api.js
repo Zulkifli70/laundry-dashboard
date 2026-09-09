@@ -56,6 +56,7 @@ export const transaksiAPI = {
   getById: (id) => api.get(`/transaksi/${id}`),
   create: (data) => api.post('/transaksi', data),
   update: (id, data) => api.put(`/transaksi/${id}`, data),
+  delete: (id) => api.delete(`/transaksi/${id}`),
   export: (params) => api.get('/transaksi/export', { params, responseType: 'blob' }),
 };
 
@@ -69,6 +70,8 @@ export const pengeluaranAPI = {
 export const stokAPI = {
   getAll: (params) => api.get('/stok', { params }),
   create: (data) => api.post('/stok', data),
+  update: (id, data) => api.put(`/stok/${id}`, data),
+  delete: (id) => api.delete(`/stok/${id}`),
   adjust: (id, data) => api.put(`/stok/${id}/adjust`, data),
   getLog: (id) => api.get(`/stok/${id}/log`),
 };

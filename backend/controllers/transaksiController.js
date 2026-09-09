@@ -214,3 +214,17 @@ exports.exportTransaksi = async (req, res) => {
     res.status(500).json({ message: 'Terjadi kesalahan server' });
   }
 };
+
+exports.deleteTransaksi = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const transaksi = await Transaksi.findByPk(id);
+    if (!transaksi) {
+      return res.status(404).json({ message: 'Transaksi tidak ditemukan' });
+    }
+    await transaksi.destroy();
+    res.json({ message: 'Transaksi berhasil dihapus' });
+  } catch (error) {
+    res.status(500).json({ message: 'Terjadi kesalahan server' });
+  }
+};
