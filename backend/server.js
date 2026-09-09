@@ -1,7 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const sequelize = require('./config/database');
+const databaseModule = require('./config/database');
+const sequelize = databaseModule.default || databaseModule;
 
 const authRoutes = require('./routes/auth');
 const outletRoutes = require('./routes/outlets');

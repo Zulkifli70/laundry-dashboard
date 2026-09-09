@@ -9,8 +9,7 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT || 5432,
     dialect: "postgres",
     logging: false,
-  },
+  }
 );
 
 module.exports = sequelize;
-module.exports.default = sequelize; // ← tambahan ini
