@@ -172,7 +172,7 @@ const Layout = () => {
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="app-topbar hidden lg:flex">
-          <label className="topbar-search">
+          {/* <label className="topbar-search">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -186,11 +186,11 @@ const Layout = () => {
               aria-label="Cari"
               placeholder="Cari transaksi, pelanggan, atau stok"
             />
-          </label>
+          </label> */}
           <div className="topbar-spacer" />
-          <button className="topbar-icon" type="button" aria-label="Notifikasi">
+          {/* <button className="topbar-icon" type="button" aria-label="Notifikasi">
             &#128276;
-          </button>
+          </button> */}
           <div className="topbar-user">
             <span>{user?.nama?.charAt(0).toUpperCase()}</span>
             <div>
