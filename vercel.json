@@ -8,8 +8,8 @@
     },
     "backend": {
       "root": "backend/",
-      "installCommand": "npm install",
-      "buildCommand": "echo 'no build step'"
+      "entrypoint": "server.js",
+      "installCommand": "npm install"
     }
   },
   "rewrites": [
