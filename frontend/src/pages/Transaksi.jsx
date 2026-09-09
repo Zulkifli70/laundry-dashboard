@@ -41,6 +41,13 @@ const emptyForm = {
   status_bayar: "belum_bayar",
 };
 
+const emptyNewPelanggan = {
+  nama: "",
+  no_hp: "",
+  alamat: "",
+  catatan: "",
+};
+
 const Transaksi = () => {
   const { user, isAdmin } = useAuth();
   const [transaksi, setTransaksi] = useState([]);
@@ -61,6 +68,10 @@ const Transaksi = () => {
     tanggal_akhir: "",
   });
   const [form, setForm] = useState(emptyForm);
+  const [showPelangganForm, setShowPelangganForm] = useState(false);
+  const [newPelanggan, setNewPelanggan] = useState(emptyNewPelanggan);
+  const [addingPelanggan, setAddingPelanggan] = useState(false);
+  const [pelangganError, setPelangganError] = useState("");
 
   // Sinkron outlet karyawan begitu user tersedia
   useEffect(() => {
@@ -276,6 +287,43 @@ const Transaksi = () => {
     } catch (e) {
       console.error(e);
       alert(e.response?.data?.message || "Gagal update status");
+    }
+  };
+
+  const handleAddPelanggan = async (e) => {
+    e.preventDefault();
+    setPelangganError("");
+    if (!newPelanggan.nama.trim()) return setPelangganError("Nama wajib diisi.");
+    if (!newPelanggan.no_hp.trim()) return setPelangganError("No HP wajib diisi.");
+    setAddingPelanggan(true);
+    try {
+      const outletId = isAdmin ? parseInt(form.outlet_id) : user.outlet_id;
+      if (!outletId) {
+        setPelangganError("Pilih outlet terlebih dahulu.");
+        setAddingPelanggan(false);
+        return;
+      }
+      const res = await pelangganAPI.create({
+        outlet_id: outletId,
+        nama: newPelanggan.nama.trim(),
+        no_hp: newPelanggan.no_hp.trim(),
+        alamat: newPelanggan.alamat.trim(),
+        catatan: newPelanggan.catatan.trim(),
+      });
+      const created = res.data;
+      setPelanggan((prev) => [...prev, created].sort((a, b) => a.nama.localeCompare(b.nama)));
+      setForm((f) => ({
+        ...f,
+        pelanggan_id: String(created.id),
+        nama_pelanggan: created.nama,
+        no_hp_pelanggan: created.no_hp,
+      }));
+      setNewPelanggan(emptyNewPelanggan);
+      setShowPelangganForm(false);
+    } catch (err) {
+      setPelangganError(err.response?.data?.message || "Gagal menambah pelanggan.");
+    } finally {
+      setAddingPelanggan(false);
     }
   };
 
@@ -625,44 +673,48 @@ const Transaksi = () => {
               )}
             </div>
             <div className="modal-field" style={{ gridColumn: "1 / -1" }}>
-              <label>Pelanggan (Pilih dari daftar)</label>
-              <select
-                name="pelanggan_id"
-                value={form.pelanggan_id}
-                onChange={handleForm}
-              >
-                <option value="">-- Pilih pelanggan (atau isi manual di bawah) --</option>
-                {pelanggan.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nama} — {p.no_hp}
-                  </option>
-                ))}
-              </select>
-              {!masterLoading && pelanggan.length === 0 && (
-                <small style={{ color: "var(--color-text-muted)" }}>
-                  Belum ada pelanggan. Tambahkan di menu Pelanggan atau isi manual.
-                </small>
+              <label>Pelanggan *</label>
+              <div className="flex gap-2">
+                <select
+                  name="pelanggan_id"
+                  value={form.pelanggan_id}
+                  onChange={handleForm}
+                  className="flex-1 px-3.5 py-2.5 rounded-lg text-sm outline-none"
+                  style={selectStyle}
+                  onFocus={(e) => (e.target.style.borderColor = "var(--color-accent-blue)")}
+                  onBlur={(e) => (e.target.style.borderColor = "var(--color-card-border)")}
+                >
+                  <option value="">-- Pilih pelanggan --</option>
+                  {pelanggan.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nama} — {p.no_hp}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setShowPelangganForm(true)}
+                  className="px-3 py-2.5 rounded-lg text-sm font-semibold text-white shrink-0"
+                  style={{ background: "var(--color-accent-green, #22c55e)" }}
+                  title="Tambah pelanggan baru"
+                >
+                  +
+                </button>
+              </div>
+              {form.pelanggan_id && (
+                <div className="flex gap-3 mt-2 text-xs" style={{ color: "var(--color-text-muted)" }}>
+                  <span>{form.nama_pelanggan}</span>
+                  <span>{form.no_hp_pelanggan}</span>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, pelanggan_id: "", nama_pelanggan: "", no_hp_pelanggan: "" }))}
+                    className="underline"
+                    style={{ color: "var(--color-accent-red, #ef4444)" }}
+                  >
+                    Hapus
+                  </button>
+                </div>
               )}
-            </div>
-            <div className="modal-field">
-              <label>Nama Pelanggan *</label>
-              <input
-                name="nama_pelanggan"
-                value={form.nama_pelanggan}
-                onChange={handleForm}
-                placeholder="Nama pelanggan"
-                required
-              />
-            </div>
-            <div className="modal-field">
-              <label>No HP / WA *</label>
-              <input
-                name="no_hp_pelanggan"
-                value={form.no_hp_pelanggan}
-                onChange={handleForm}
-                placeholder="08xxxxxxxxxx"
-                required
-              />
             </div>
             <div className="modal-field">
               <label>
@@ -728,6 +780,81 @@ const Transaksi = () => {
               disabled={submitting || masterLoading}
             >
               {submitting ? "Menyimpan..." : editing ? "Simpan Perubahan" : "Simpan Transaksi"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Quick Add Pelanggan Modal */}
+      <Modal
+        open={showPelangganForm}
+        onClose={() => !addingPelanggan && setShowPelangganForm(false)}
+        title="Tambah Pelanggan Baru"
+        subtitle="Data akan langsung tersimpan dan dipilih."
+        maxWidth="420px"
+      >
+        <form onSubmit={handleAddPelanggan}>
+          <div className="space-y-3">
+            <div className="modal-field">
+              <label>Nama *</label>
+              <input
+                value={newPelanggan.nama}
+                onChange={(e) => setNewPelanggan((n) => ({ ...n, nama: e.target.value }))}
+                placeholder="Nama pelanggan"
+                required
+                autoFocus
+              />
+            </div>
+            <div className="modal-field">
+              <label>No HP / WA *</label>
+              <input
+                value={newPelanggan.no_hp}
+                onChange={(e) => setNewPelanggan((n) => ({ ...n, no_hp: e.target.value }))}
+                placeholder="08xxxxxxxxxx"
+                required
+              />
+            </div>
+            <div className="modal-field">
+              <label>Alamat</label>
+              <input
+                value={newPelanggan.alamat}
+                onChange={(e) => setNewPelanggan((n) => ({ ...n, alamat: e.target.value }))}
+                placeholder="Alamat (opsional)"
+              />
+            </div>
+            <div className="modal-field">
+              <label>Catatan</label>
+              <input
+                value={newPelanggan.catatan}
+                onChange={(e) => setNewPelanggan((n) => ({ ...n, catatan: e.target.value }))}
+                placeholder="Catatan (opsional)"
+              />
+            </div>
+          </div>
+          {pelangganError && (
+            <div className="modal-error" style={{ marginTop: 10 }}>
+              {pelangganError}
+            </div>
+          )}
+          <div className="modal-actions" style={{ marginTop: 16 }}>
+            <button
+              type="button"
+              className="modal-btn modal-btn--ghost"
+              onClick={() => {
+                setShowPelangganForm(false);
+                setNewPelanggan(emptyNewPelanggan);
+                setPelangganError("");
+              }}
+              disabled={addingPelanggan}
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              className="modal-btn modal-btn--primary"
+              disabled={addingPelanggan}
+            >
+              {addingPelanggan ? "Menyimpan..." : "Simpan & Pilih"}
             </button>
           </div>
         </form>
