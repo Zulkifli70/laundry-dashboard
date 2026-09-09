@@ -61,14 +61,48 @@ exports.getTransaksiById = async (req, res) => {
 
 exports.createTransaksi = async (req, res) => {
   try {
-    const {
+    let {
       outlet_id,
       layanan_id,
       nama_pelanggan,
       no_hp_pelanggan,
       jumlah_qty,
       total_harga,
+      status_bayar,
     } = req.body;
+
+    // Karyawan otomatis memakai outlet sendiri bila tidak dikirim / kosong
+    if (req.user.role === 'karyawan') {
+      outlet_id = req.user.outlet_id;
+    }
+
+    if (!outlet_id) {
+      return res.status(400).json({ message: 'Outlet wajib dipilih' });
+    }
+    if (!layanan_id) {
+      return res.status(400).json({ message: 'Layanan wajib dipilih' });
+    }
+    if (!nama_pelanggan || !no_hp_pelanggan) {
+      return res.status(400).json({ message: 'Nama dan No HP pelanggan wajib diisi' });
+    }
+    if (!jumlah_qty || parseFloat(jumlah_qty) <= 0) {
+      return res.status(400).json({ message: 'Jumlah (qty) harus lebih dari 0' });
+    }
+
+    // Hitung ulang total dari harga layanan agar konsisten
+    const layanan = await Layanan.findByPk(layanan_id);
+    if (!layanan) {
+      return res.status(404).json({ message: 'Layanan tidak ditemukan' });
+    }
+    const qty = parseFloat(jumlah_qty);
+    const computedTotal = parseFloat(layanan.harga) * qty;
+    // Pakai total kiriman client hanya bila valid, fallback ke hitungan server
+    if (!total_harga || isNaN(parseFloat(total_harga)) || parseFloat(total_harga) <= 0) {
+      total_harga = computedTotal;
+    }
+
+    const allowedBayar = ['belum_bayar', 'lunas'];
+    if (!allowedBayar.includes(status_bayar)) status_bayar = 'belum_bayar';
 
     const transaksi = await Transaksi.create({
       outlet_id,
@@ -76,14 +110,15 @@ exports.createTransaksi = async (req, res) => {
       layanan_id,
       nama_pelanggan,
       no_hp_pelanggan,
-      jumlah_qty,
+      jumlah_qty: qty,
       total_harga,
       status: 'diterima',
-      status_bayar: 'belum_bayar',
+      status_bayar,
     });
 
     res.status(201).json(transaksi);
   } catch (error) {
+    console.error('createTransaksi error:', error);
     res.status(500).json({ message: 'Terjadi kesalahan server' });
   }
 };
@@ -96,7 +131,17 @@ exports.updateTransaksi = async (req, res) => {
     if (!transaksi) {
       return res.status(404).json({ message: 'Transaksi tidak ditemukan' });
     }
-    await transaksi.update({ status, status_bayar });
+    // Karyawan hanya boleh ubah transaksi outlet sendiri
+    if (req.user.role === 'karyawan' && transaksi.outlet_id !== req.user.outlet_id) {
+      return res.status(403).json({ message: 'Akses ditolak untuk outlet ini' });
+    }
+    const patch = {};
+    if (status) patch.status = status;
+    if (status_bayar) patch.status_bayar = status_bayar;
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ message: 'Tidak ada perubahan dikirim' });
+    }
+    await transaksi.update(patch);
     res.json(transaksi);
   } catch (error) {
     res.status(500).json({ message: 'Terjadi kesalahan server' });
