@@ -13,4 +13,3 @@ const sequelize = new Sequelize(
 );
 
 module.exports = sequelize;
-module.exports.default = sequelize;
