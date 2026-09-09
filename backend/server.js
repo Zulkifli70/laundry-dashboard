@@ -18,6 +18,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+let dbConnected = false;
+
+app.use(async (req, res, next) => {
+  if (!dbConnected) {
+    try {
+      await sequelize.authenticate();
+      await sequelize.sync({ alter: true });
+      dbConnected = true;
+      console.log('Database connected & synced');
+    } catch (error) {
+      console.error('Database connection failed:', error);
+      return res.status(500).json({ message: 'Database connection failed' });
+    }
+  }
+  next();
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/outlets', outletRoutes);
 app.use('/api/users', userRoutes);
@@ -31,20 +48,11 @@ app.get('/', (req, res) => {
   res.json({ message: 'API Laundry Dashboard' });
 });
 
-const PORT = process.env.PORT || 5000;
+module.exports = app;
 
-const startServer = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('Database connected');
-    await sequelize.sync({ alter: true });
-    console.log('Models synced');
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error('Unable to connect to database:', error);
-  }
-};
-
-startServer();
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
