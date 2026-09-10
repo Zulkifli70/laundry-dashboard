@@ -1,7 +1,7 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const db = require('./config/database');
-const sequelize = db.default || db;
+const sequelize = (db.default || db).sequelize;
 const { Outlet, User, Layanan, Pelanggan } = require('./models');
 
 const seed = async () => {

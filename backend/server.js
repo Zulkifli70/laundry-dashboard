@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const db = require('./config/database');
-const sequelize = db.default || db;
+const sequelize = (db.default || db).sequelize;
 
 const authRoutes = require('./routes/auth');
 const outletRoutes = require('./routes/outlets');

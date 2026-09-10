@@ -1,6 +1,6 @@
 const { DataTypes } = require("sequelize");
 const db = require("../config/database");
-const sequelize = db.default || db;
+const sequelize = (db.default || db).sequelize;
 const Outlet = require("./Outlet");
 
 const Pelanggan = sequelize.define(
